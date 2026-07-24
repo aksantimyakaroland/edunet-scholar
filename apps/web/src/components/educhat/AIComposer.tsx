@@ -44,7 +44,7 @@ export function AIComposer({ onSend, onStop, isLoading }: AIComposerProps) {
           onKeyDown={handleKeyDown}
           placeholder="Ask anything about your studies..."
           rows={1}
-          className="w-full resize-none bg-transparent px-5 pt-4 pb-3 text-sm outline-none placeholder:text-muted-foreground/60"
+          className="w-full resize-none min-h-[44px] bg-transparent px-5 pt-4 pb-3 text-sm outline-none placeholder:text-muted-foreground/60"
           disabled={isLoading}
         />
         <div className="flex items-center justify-between border-t border-border/50 px-4 py-2">

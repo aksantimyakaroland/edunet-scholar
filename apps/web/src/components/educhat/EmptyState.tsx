@@ -15,7 +15,7 @@ type EmptyStateProps = {
 
 export function EmptyState({ onSuggestion }: EmptyStateProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-4">
+    <div className="flex h-full flex-col items-center justify-center px-4">
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/10">
           <GraduationCap className="h-7 w-7 text-primary" />

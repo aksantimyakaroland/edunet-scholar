@@ -9,6 +9,18 @@ export function useChat() {
   const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<ExtendedMessage[]>([]);
+
+  const updateMessages = useCallback(
+    (updater: (prev: ExtendedMessage[]) => ExtendedMessage[]) => {
+      setMessages((prev) => {
+        const next = updater(prev);
+        messagesRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
 
   const sendMessage = useCallback(async (content: string) => {
     const userMessage: ExtendedMessage = {
@@ -17,7 +29,7 @@ export function useChat() {
       content,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    updateMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     const assistantMessage: ExtendedMessage = {
@@ -26,13 +38,14 @@ export function useChat() {
       content: "",
     };
 
-    setMessages((prev) => [...prev, assistantMessage]);
+    updateMessages((prev) => [...prev, assistantMessage]);
 
-    const history = messages.map((m) => ({
-      role: m.role as "user" | "model",
-      content: m.content,
-    }));
-    history.push({ role: "user" as const, content });
+    const history = messagesRef.current
+      .filter((m) => m.id !== assistantMessage.id)
+      .map((m) => ({
+        role: m.role as "user" | "model",
+        content: m.content,
+      }));
 
     try {
       abortRef.current = new AbortController();
@@ -56,18 +69,22 @@ export function useChat() {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        setMessages((prev) =>
+        const current = buffer;
+        updateMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantMessage.id ? { ...m, content: buffer } : m
+            m.id === assistantMessage.id ? { ...m, content: current } : m
           )
         );
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setMessages((prev) =>
+      updateMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessage.id
-            ? { ...m, content: `Error: ${error instanceof Error ? error.message : "Unknown error"}` }
+            ? {
+                ...m,
+                content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              }
             : m
         )
       );
@@ -75,15 +92,16 @@ export function useChat() {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [messages]);
+  }, [updateMessages]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
+    setIsLoading(false);
   }, []);
 
   const clear = useCallback(() => {
-    setMessages([]);
-  }, []);
+    updateMessages(() => []);
+  }, [updateMessages]);
 
   return { messages, isLoading, sendMessage, stop, clear };
 }

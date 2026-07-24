@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useChat } from "@/hooks/use-chat";
 import { AIComposer } from "./AIComposer";
 import { MessageBubble } from "./MessageBubble";
@@ -8,6 +9,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function ChatInterface() {
   const { messages, isLoading, sendMessage, stop, clear } = useChat();
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -35,6 +41,7 @@ export function ChatInterface() {
                 content={msg.content}
               />
             ))}
+            <div ref={bottomRef} className="h-px w-full" />
           </div>
         )}
       </ScrollArea>
