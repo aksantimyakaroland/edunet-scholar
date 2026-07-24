@@ -1,41 +1,73 @@
 "use client";
 
-import { useState } from "react";
-
-export type EduDocument = {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  uploadedAt: string;
-};
+import { useEduBookStore } from "@/stores/edubook-store";
 
 export function useDocuments() {
-  const [documents, setDocuments] = useState<EduDocument[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const {
+    documents,
+    isUploading,
+    setDocuments,
+    addDocument,
+    removeDocument,
+    setUploading,
+    setLoading,
+  } = useEduBookStore();
+
+  async function fetchDocuments() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/edubook");
+      const data = await res.json();
+      if (data.documents) {
+        setDocuments(
+          data.documents.map((d: { id: string; title: string; file_type: string; created_at: string }) => ({
+            id: d.id,
+            title: d.title,
+            file_type: d.file_type,
+            storage_path: "",
+            created_at: d.created_at,
+          }))
+        );
+      }
+    } catch {}
+    setLoading(false);
+  }
 
   async function upload(file: File) {
-    setIsUploading(true);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    // Simulate upload delay
-    await new Promise((r) => setTimeout(r, 1500));
+      const res = await fetch("/api/edubook/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    const doc: EduDocument = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    };
+      if (!res.ok) throw new Error("Upload failed");
 
-    setDocuments((prev) => [...prev, doc]);
-    setIsUploading(false);
-    return doc;
+      const data = await res.json();
+      addDocument({
+        id: data.id,
+        title: data.name,
+        file_type: data.type,
+        storage_path: "",
+        created_at: data.uploadedAt,
+      });
+      return data;
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setUploading(false);
+    }
   }
 
-  function remove(id: string) {
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
+  async function remove(id: string) {
+    try {
+      await fetch(`/api/edubook/${id}`, { method: "DELETE" });
+      removeDocument(id);
+    } catch {}
   }
 
-  return { documents, isUploading, upload, remove };
+  return { documents, isUploading, upload, remove, fetchDocuments };
 }
