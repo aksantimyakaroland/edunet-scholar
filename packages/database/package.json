@@ -1,0 +1,11 @@
+{
+  "name": "@edunet/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
+    "@supabase/ssr": "^0.12.3"
+  }
+}
