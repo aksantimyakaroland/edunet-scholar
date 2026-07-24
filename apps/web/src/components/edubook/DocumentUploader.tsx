@@ -5,7 +5,7 @@ import { Upload, File, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type DocumentUploaderProps = {
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (file: File) => Promise<void | { id: string }>;
   isUploading: boolean;
 };
 
