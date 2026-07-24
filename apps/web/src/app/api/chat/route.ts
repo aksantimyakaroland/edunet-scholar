@@ -13,7 +13,12 @@ export async function POST(request: NextRequest) {
     return new Response("GEMMA_API_KEY not configured", { status: 500 });
   }
 
-  const client = new GemmaClient(apiKey);
+  const client = new GemmaClient(
+    apiKey,
+    "You are EduChat, an AI academic tutor for Edunet Scholar. " +
+    "Respond concisely and helpfully. Do not output your internal " +
+    "reasoning, planning, or thought process. Only output the final response."
+  );
 
   const stream = new ReadableStream({
     async start(controller) {

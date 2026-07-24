@@ -13,9 +13,11 @@ export type StreamChunk = {
 
 export class GemmaClient {
   private apiKey: string;
+  private systemPrompt?: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, systemPrompt?: string) {
     this.apiKey = apiKey;
+    this.systemPrompt = systemPrompt;
   }
 
   async *streamChat(
@@ -32,6 +34,9 @@ export class GemmaClient {
             role: m.role,
             parts: [{ text: m.content }],
           })),
+          systemInstruction: this.systemPrompt
+            ? { parts: [{ text: this.systemPrompt }] }
+            : undefined,
           generationConfig: {
             temperature: 0.7,
             topP: 0.95,
@@ -100,6 +105,9 @@ export class GemmaClient {
             role: m.role,
             parts: [{ text: m.content }],
           })),
+          systemInstruction: this.systemPrompt
+            ? { parts: [{ text: this.systemPrompt }] }
+            : undefined,
           generationConfig: {
             temperature: 0.7,
             topP: 0.95,
