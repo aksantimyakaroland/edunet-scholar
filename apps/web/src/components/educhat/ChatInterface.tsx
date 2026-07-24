@@ -23,10 +23,12 @@ export function ChatInterface() {
         )}
       </div>
 
-      <ScrollArea className="flex-1">
-        {messages.length === 0 ? (
+      {messages.length === 0 ? (
+        <div className="flex flex-1 flex-col overflow-hidden">
           <EmptyState onSuggestion={sendMessage} />
-        ) : (
+        </div>
+      ) : (
+        <ScrollArea className="flex-1 min-h-0">
           <div className="mx-auto max-w-3xl py-4">
             {messages.map((msg) => (
               <MessageBubble
@@ -36,8 +38,8 @@ export function ChatInterface() {
               />
             ))}
           </div>
-        )}
-      </ScrollArea>
+        </ScrollArea>
+      )}
 
       <div className="border-t border-border bg-background pt-2">
         <AIComposer

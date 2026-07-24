@@ -64,6 +64,9 @@ export function AIComposer({ onSend, onStop, isLoading }: AIComposerProps) {
           </button>
         </div>
       </div>
+      <p className="mt-2 text-center text-[10px] leading-tight text-muted-foreground/30 select-none">
+        EduChat can make mistakes. Verify its responses.
+      </p>
     </div>
   );
 }
