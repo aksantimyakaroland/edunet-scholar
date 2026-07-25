@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useChat } from "@/hooks/use-chat";
-import { useChatSessions } from "@/hooks/use-chat-sessions";
+import { useChatSessionsStore } from "@/stores/chat-sessions-store";
 import { AIComposer } from "./AIComposer";
 import { MessageBubble } from "./MessageBubble";
 import { EmptyState } from "./EmptyState";
@@ -14,7 +14,7 @@ export function ChatInterface() {
   const sessionId = searchParams.get("session");
   const { messages, isLoading, sessionLoaded, sendMessage, stop, clear } =
     useChat(sessionId);
-  const { sessions } = useChatSessions();
+  const sessions = useChatSessionsStore((s) => s.sessions);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const currentSession = sessions.find((s) => s.id === sessionId);

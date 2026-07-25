@@ -13,6 +13,7 @@ export function useChat(sessionId?: string | null) {
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ExtendedMessage[]>([]);
   const activeSessionId = useRef<string | null>(null);
+  const sessionJustCreatedRef = useRef(false);
   const setCurrentSession = useChatSessionsStore((s) => s.setCurrentSession);
 
   // Load messages when sessionId changes
@@ -22,6 +23,13 @@ export function useChat(sessionId?: string | null) {
       messagesRef.current = [];
       setSessionLoaded(true);
       activeSessionId.current = null;
+      return;
+    }
+
+    // Don't reload if we just created this session (messages are streaming)
+    if (sessionJustCreatedRef.current && activeSessionId.current === sessionId) {
+      sessionJustCreatedRef.current = false;
+      setSessionLoaded(true);
       return;
     }
 
@@ -70,7 +78,6 @@ export function useChat(sessionId?: string | null) {
       // Ensure we have a session
       let sid = activeSessionId.current;
       if (!sid) {
-        // Create a new session via the API
         try {
           const res = await fetch("/api/chat/sessions", {
             method: "POST",
@@ -81,7 +88,8 @@ export function useChat(sessionId?: string | null) {
           if (data.session) {
             sid = data.session.id;
             activeSessionId.current = sid;
-            // Update URL without reload before updating store
+            sessionJustCreatedRef.current = true;
+            // Update URL without triggering re-render race
             const url = new URL(window.location.href);
             url.searchParams.set("session", sid!);
             window.history.replaceState({}, "", url.toString());
@@ -165,7 +173,12 @@ export function useChat(sessionId?: string | null) {
 
   const clear = useCallback(() => {
     updateMessages(() => []);
-  }, [updateMessages]);
+    activeSessionId.current = null;
+    setCurrentSession(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("session");
+    window.history.replaceState({}, "", url.toString());
+  }, [updateMessages, setCurrentSession]);
 
   return { messages, isLoading, sessionLoaded, sendMessage, stop, clear };
 }

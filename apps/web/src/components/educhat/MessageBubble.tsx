@@ -80,8 +80,8 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
       )}
     >
       {!isUser && (
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-          <Bot className="h-4 w-4 text-primary" />
+        <div aria-label="AI" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <Bot className="h-4 w-4 text-primary" aria-hidden />
         </div>
       )}
       <div
@@ -104,8 +104,8 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
         )}
       </div>
       {isUser && (
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary">
-          <User className="h-4 w-4 text-primary-foreground" />
+        <div aria-label="You" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary">
+          <User className="h-4 w-4 text-primary-foreground" aria-hidden />
         </div>
       )}
     </div>

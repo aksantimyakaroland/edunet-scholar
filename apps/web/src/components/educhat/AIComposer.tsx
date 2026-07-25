@@ -53,6 +53,7 @@ export function AIComposer({ onSend, onStop, isLoading }: AIComposerProps) {
           </span>
           <button
             onClick={isLoading ? onStop : handleSubmit}
+            aria-label={isLoading ? "Stop generating" : "Send message"}
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             disabled={!input.trim() && !isLoading}
           >

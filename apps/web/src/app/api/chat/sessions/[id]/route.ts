@@ -17,6 +17,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { title } = await request.json();
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
+  const { data: existing, error: fetchError } = await supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+
   const { error } = await supabase
     .from("chat_sessions")
     .update({ title: title.trim() })
@@ -38,6 +46,14 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
   const { error } = await supabase.from("chat_sessions").delete().eq("id", id);
 

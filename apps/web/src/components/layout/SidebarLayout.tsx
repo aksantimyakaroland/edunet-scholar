@@ -31,7 +31,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+      <SheetContent side="left" className="w-[280px] p-0">
         <AppSidebar />
       </SheetContent>
     </Sheet>

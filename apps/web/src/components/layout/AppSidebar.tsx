@@ -113,6 +113,9 @@ export function AppSidebar() {
                     deleteSession(session.id);
                     if (session.id === currentSessionId) {
                       setCurrentSession(null);
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete("session");
+                      window.history.replaceState({}, "", url.toString());
                     }
                   }}
                   className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/30 opacity-0 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground/60 group-hover:opacity-100"

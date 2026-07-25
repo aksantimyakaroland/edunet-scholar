@@ -1,27 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useChatSessionsStore } from "@/stores/chat-sessions-store";
+import type { ChatSession } from "@/stores/chat-sessions-store";
 
-export type ChatSession = {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-};
+export type { ChatSession };
 
 export function useChatSessions() {
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const sessionsFetched = useChatSessionsStore((s) => s.sessionsFetched);
+  const sessions = useChatSessionsStore((s) => s.sessions);
+  const sessionsLoading = useChatSessionsStore((s) => s.sessionsLoading);
+  const markSessionsFetched = useChatSessionsStore((s) => s.markSessionsFetched);
+  const setSessionsLoading = useChatSessionsStore((s) => s.setSessionsLoading);
+  const setSessions = useChatSessionsStore((s) => s.setSessions);
+  const addSession = useChatSessionsStore((s) => s.addSession);
+  const removeSession = useChatSessionsStore((s) => s.removeSession);
+  const renameSessionLocally = useChatSessionsStore((s) => s.renameSessionLocally);
 
   useEffect(() => {
+    if (sessionsFetched) return;
+    markSessionsFetched();
+    setSessionsLoading(true);
     fetch("/api/chat/sessions")
       .then((r) => r.json())
       .then((data) => {
         if (data.sessions) setSessions(data.sessions);
       })
       .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
+      .finally(() => setSessionsLoading(false));
+  }, [sessionsFetched, markSessionsFetched, setSessionsLoading, setSessions]);
 
   const createSession = useCallback(
     async (firstMessage?: string): Promise<ChatSession | null> => {
@@ -32,37 +39,41 @@ export function useChatSessions() {
           body: JSON.stringify({ firstMessage }),
         });
         const data = await res.json();
-        if (data.session) {
-          setSessions((prev) => [data.session, ...prev]);
+        if (res.ok && data.session) {
+          addSession(data.session);
           return data.session;
         }
       } catch {}
       return null;
     },
-    []
+    [addSession]
   );
 
   const deleteSession = useCallback(async (id: string) => {
     try {
-      await fetch(`/api/chat/sessions/${id}`, { method: "DELETE" });
-      setSessions((prev) => prev.filter((s) => s.id !== id));
+      const res = await fetch(`/api/chat/sessions/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) removeSession(id);
     } catch {}
-  }, []);
+  }, [removeSession]);
 
   const renameSession = useCallback(async (id: string, title: string) => {
     try {
-      await fetch(`/api/chat/sessions/${id}`, {
+      const res = await fetch(`/api/chat/sessions/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, title, updated_at: new Date().toISOString() } : s
-        )
-      );
+      if (res.ok) renameSessionLocally(id, title);
     } catch {}
-  }, []);
+  }, [renameSessionLocally]);
 
-  return { sessions, isLoading, createSession, deleteSession, renameSession };
+  return {
+    sessions,
+    isLoading: sessionsLoading,
+    createSession,
+    deleteSession,
+    renameSession,
+  };
 }

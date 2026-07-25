@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { MODULES } from "@edunet/shared";
 import { useChatSessionsStore } from "@/stores/chat-sessions-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const iconMap: Record<string, typeof MessageSquare> = {
   MessageSquare,
@@ -22,6 +23,14 @@ const iconMap: Record<string, typeof MessageSquare> = {
 export function MiniSidebar() {
   const pathname = usePathname();
   const setCurrentSession = useChatSessionsStore((s) => s.setCurrentSession);
+  const user = useAuthStore((s) => s.user);
+  const displayName = user?.user_metadata?.full_name || user?.email || "User";
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <aside className="flex h-full w-16 flex-col items-center border-r border-sidebar-border bg-sidebar py-4 gap-4">
@@ -64,7 +73,7 @@ export function MiniSidebar() {
 
       <div className="mt-auto flex flex-col items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-accent text-[10px] font-medium text-sidebar-foreground">
-          U
+          {initials}
         </div>
       </div>
     </aside>
