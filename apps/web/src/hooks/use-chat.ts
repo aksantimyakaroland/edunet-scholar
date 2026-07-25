@@ -48,11 +48,9 @@ export function useChat(sessionId?: string | null) {
 
   const updateMessages = useCallback(
     (updater: (prev: ExtendedMessage[]) => ExtendedMessage[]) => {
-      setMessages((prev) => {
-        const next = updater(prev);
-        messagesRef.current = next;
-        return next;
-      });
+      const next = updater(messagesRef.current);
+      messagesRef.current = next;
+      setMessages(next);
     },
     []
   );

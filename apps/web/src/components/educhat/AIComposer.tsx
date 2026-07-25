@@ -35,7 +35,7 @@ export function AIComposer({ onSend, onStop, isLoading }: AIComposerProps) {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-3xl px-4 pb-6">
+    <div className="relative mx-auto w-full max-w-3xl px-4 sm:px-6 pb-6">
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow focus-within:border-primary/50 focus-within:shadow-md">
         <textarea
           ref={textareaRef}

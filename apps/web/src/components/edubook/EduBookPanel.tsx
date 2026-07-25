@@ -21,15 +21,15 @@ export function EduBookPanel() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div>
+      <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3">
+        <div className="min-w-0">
           <h2 className="font-heading text-sm font-semibold">EduBook</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden sm:block text-xs text-muted-foreground">
             Upload course materials and ask questions about them.
           </p>
         </div>
         {selectedDocIds.length > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap justify-end">
             <button
               onClick={() => setShowChat(!showChat)}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${

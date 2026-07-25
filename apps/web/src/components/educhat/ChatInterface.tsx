@@ -53,7 +53,7 @@ export function ChatInterface() {
         ) : messages.length === 0 ? (
           <EmptyState onSuggestion={sendMessage} />
         ) : (
-          <div className="mx-auto max-w-3xl py-4">
+          <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-4">
             {messages.map((msg) => (
               <MessageBubble
                 key={msg.id}

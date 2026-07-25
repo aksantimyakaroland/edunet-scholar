@@ -75,7 +75,7 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
   return (
     <div
       className={cn(
-        "flex w-full gap-4 px-4 py-6",
+        "flex w-full gap-3 sm:gap-4 px-3 sm:px-4 py-6",
         isUser ? "justify-end" : "justify-start"
       )}
     >
@@ -86,7 +86,7 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
       )}
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+          "max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-foreground"

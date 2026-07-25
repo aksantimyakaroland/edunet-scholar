@@ -88,8 +88,8 @@ export function EduBookChatPanel() {
             key={i}
             className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
               msg.role === "user"
-                ? "ml-8 bg-primary text-primary-foreground"
-                : "mr-8 bg-muted text-foreground"
+                ? "ml-4 sm:ml-8 bg-primary text-primary-foreground"
+                : "mr-4 sm:mr-8 bg-muted text-foreground"
             }`}
           >
             {msg.role === "user" ? (
@@ -102,7 +102,7 @@ export function EduBookChatPanel() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 sm:p-4">
         <div className="flex items-center gap-2">
           <input
             value={input}

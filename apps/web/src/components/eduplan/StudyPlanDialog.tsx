@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useEduPlanStore } from "@/stores/eduplan-store";
-import { Loader2, X, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -14,8 +21,6 @@ export function StudyPlanDialog({ open, onClose }: Props) {
     useEduPlanStore();
   const [prompt, setPrompt] = useState("");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0]));
-
-  if (!open) return null;
 
   async function handleGenerate() {
     if (!prompt.trim()) return;
@@ -70,14 +75,13 @@ export function StudyPlanDialog({ open, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex h-[80vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <h3 className="font-heading text-sm font-semibold">Generate Study Plan</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="flex flex-col max-h-[80vh] sm:max-h-[70vh] p-0 gap-0">
+        <DialogHeader className="border-b border-border px-5 py-3">
+          <DialogTitle className="font-heading text-sm font-semibold">
+            Generate Study Plan
+          </DialogTitle>
+        </DialogHeader>
 
         <div className="border-b border-border px-5 py-3">
           <div className="flex gap-2">
@@ -86,12 +90,12 @@ export function StudyPlanDialog({ open, onClose }: Props) {
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
               placeholder='e.g. "Calculus final on May 15, chapters 1-8"'
-              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
+              className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
             />
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 shrink-0"
             >
               {isGenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -127,14 +131,14 @@ export function StudyPlanDialog({ open, onClose }: Props) {
                     className="flex w-full items-center gap-2 px-4 py-3 text-left"
                   >
                     {expandedWeeks.has(i) ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
-                    <span className="flex-1 font-heading text-sm font-semibold">
+                    <span className="flex-1 font-heading text-sm font-semibold min-w-0 truncate">
                       {week.title}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {week.tasks.length} tasks
                     </span>
                     <button
@@ -142,7 +146,7 @@ export function StudyPlanDialog({ open, onClose }: Props) {
                         e.stopPropagation();
                         handleImport(i);
                       }}
-                      className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+                      className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 shrink-0"
                     >
                       Import week
                     </button>
@@ -160,10 +164,10 @@ export function StudyPlanDialog({ open, onClose }: Props) {
                             key={j}
                             className="flex items-center gap-2 text-sm"
                           >
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-                            {task.title}
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                            <span className="truncate">{task.title}</span>
                             {task.estimatedHours && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground shrink-0">
                                 ~{task.estimatedHours}h
                               </span>
                             )}
@@ -179,16 +183,16 @@ export function StudyPlanDialog({ open, onClose }: Props) {
         </div>
 
         {studyPlan && !isGenerating && (
-          <div className="border-t border-border px-5 py-3">
+          <DialogFooter className="border-t border-border px-5 py-3">
             <button
               onClick={handleImportAll}
               className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Import All to Tasks
             </button>
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTasks } from "@/hooks/use-tasks";
 import { useEduPlanStore } from "@/stores/eduplan-store";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SubjectSidebar } from "./SubjectSidebar";
 import { TaskItem } from "./TaskItem";
 import { SmartTaskInput } from "./SmartTaskInput";
@@ -20,11 +21,10 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Calendar, Loader2 } from "lucide-react";
+import { Calendar, Loader2, BookOpen } from "lucide-react";
 
 export function EduPlanPanel() {
   const {
-    subjects,
     currentSubjectId,
     tasks,
     allTasks,
@@ -75,12 +75,22 @@ export function EduPlanPanel() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div>
-          <h2 className="font-heading text-sm font-semibold">EduPlan</h2>
-          <p className="text-xs text-muted-foreground">
-            Manage tasks and plan your study schedule.
-          </p>
+      <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3">
+        <div className="min-w-0 flex items-center gap-2">
+          <Sheet>
+            <SheetTrigger className="flex lg:hidden items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <BookOpen className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <SubjectSidebar />
+            </SheetContent>
+          </Sheet>
+          <div>
+            <h2 className="font-heading text-sm font-semibold">EduPlan</h2>
+            <p className="hidden sm:block text-xs text-muted-foreground">
+              Manage tasks and plan your study schedule.
+            </p>
+          </div>
         </div>
         <button
           onClick={() => setPlanOpen(true)}
@@ -92,12 +102,12 @@ export function EduPlanPanel() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-56 shrink-0">
+        <div className="hidden lg:block w-56 shrink-0">
           <SubjectSidebar />
         </div>
 
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl p-6">
+          <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
             {currentSubjectId && (
               <DailyDigest />
             )}

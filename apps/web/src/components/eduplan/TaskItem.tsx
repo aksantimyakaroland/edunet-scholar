@@ -59,11 +59,11 @@ export function TaskItem({ task }: Props) {
 
   return (
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-50")}>
-      <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50">
-        <button className="cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground" {...attributes} {...listeners}>
+      <div className="flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 transition-colors hover:bg-muted/50">
+        <button className="cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground shrink-0" {...attributes} {...listeners}>
           <GripVertical className="h-3.5 w-3.5" />
         </button>
-        <button onClick={toggleDone}>
+        <button onClick={toggleDone} className="shrink-0">
           {task.status === "done" ? (
             <CheckCircle2 className="h-4 w-4 text-primary" />
           ) : (
@@ -72,23 +72,23 @@ export function TaskItem({ task }: Props) {
         </button>
         <span
           className={cn(
-            "flex-1 text-sm",
+            "flex-1 text-sm truncate",
             task.status === "done" && "text-muted-foreground line-through"
           )}
         >
           {task.title}
         </span>
         {task.estimated_hours && (
-          <span className="text-xs text-muted-foreground/60">~{task.estimated_hours}h</span>
+          <span className="hidden sm:inline text-xs text-muted-foreground/60 shrink-0">~{task.estimated_hours}h</span>
         )}
         {task.due_date && (
-          <span className="text-xs text-muted-foreground/60">
+          <span className="hidden sm:inline text-xs text-muted-foreground/60 shrink-0">
             {new Date(task.due_date).toLocaleDateString()}
           </span>
         )}
         <span
           className={cn(
-            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+            "hidden sm:inline rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0",
             priorityColors[task.priority]
           )}
         >
@@ -97,7 +97,7 @@ export function TaskItem({ task }: Props) {
         {hasSubTasks && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-muted-foreground hover:text-foreground"
+            className="hidden sm:flex text-muted-foreground hover:text-foreground shrink-0"
           >
             {expanded ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -108,7 +108,7 @@ export function TaskItem({ task }: Props) {
         )}
         <button
           onClick={handleRemove}
-          className="text-muted-foreground/40 hover:text-destructive"
+          className="shrink-0 text-muted-foreground/40 hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>

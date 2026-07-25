@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { useEduBookStore } from "@/stores/edubook-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Loader2, X, FileText, Lightbulb, GraduationCap, BookOpen } from "lucide-react";
+import { Loader2, FileText, Lightbulb, GraduationCap, BookOpen } from "lucide-react";
 
 const TYPES = [
   { id: "summary", label: "Summary", icon: FileText },
@@ -24,8 +31,6 @@ export function StudyGuideDialog({ open, onClose }: Props) {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
-  if (!open) return null;
 
   async function handleGenerate() {
     setIsLoading(true);
@@ -62,16 +67,15 @@ export function StudyGuideDialog({ open, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex h-[80vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <h3 className="font-heading text-sm font-semibold">Generate Study Material</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="flex flex-col max-h-[80vh] sm:max-h-[70vh] p-0 gap-0">
+        <DialogHeader className="border-b border-border px-5 py-3">
+          <DialogTitle className="font-heading text-sm font-semibold">
+            Generate Study Material
+          </DialogTitle>
+        </DialogHeader>
 
-        <div className="flex gap-2 border-b border-border px-5 py-3">
+        <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3">
           {TYPES.map((t) => {
             const Icon = t.icon;
             return (
@@ -95,7 +99,7 @@ export function StudyGuideDialog({ open, onClose }: Props) {
           {!content && !isLoading && !error && (
             <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
               {selectedDocIds.length === 0 ? (
-                <p>Select documents on the left to generate study materials.</p>
+                <p>Select documents to generate study materials.</p>
               ) : (
                 <p>
                   Generate a {type.replace("_", " ")} from {selectedDocIds.length} document(s).
@@ -117,7 +121,7 @@ export function StudyGuideDialog({ open, onClose }: Props) {
           )}
         </div>
 
-        <div className="border-t border-border px-5 py-3">
+        <DialogFooter className="border-t border-border px-5 py-3">
           <button
             onClick={handleGenerate}
             disabled={isLoading || selectedDocIds.length === 0}
@@ -125,8 +129,8 @@ export function StudyGuideDialog({ open, onClose }: Props) {
           >
             {isLoading ? "Generating..." : `Generate ${type.replace("_", " ")}`}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
