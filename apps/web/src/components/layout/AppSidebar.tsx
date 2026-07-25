@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { MODULES } from "@edunet/shared";
+import { useChatSessions } from "@/hooks/use-chat-sessions";
 import { useChatSessionsStore } from "@/stores/chat-sessions-store";
 import { UserMenu } from "./UserMenu";
 
@@ -22,21 +23,10 @@ const iconMap = {
   CalendarCheck,
 } as const;
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return d.toLocaleDateString();
-}
-
 export function AppSidebar() {
   const pathname = usePathname();
-  const sessions = useChatSessionsStore((s) => s.sessions);
-  const removeSession = useChatSessionsStore((s) => s.removeSession);
+  const { sessions, deleteSession } = useChatSessions();
+  const currentSessionId = useChatSessionsStore((s) => s.currentSessionId);
   const setCurrentSession = useChatSessionsStore((s) => s.setCurrentSession);
 
   return (
@@ -109,7 +99,7 @@ export function AppSidebar() {
                   onClick={() => setCurrentSession(session.id)}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 pr-8 text-sm transition-colors",
-                    session.id === useChatSessionsStore.getState().currentSessionId
+                    session.id === currentSessionId
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground/80"
                   )}
@@ -120,7 +110,10 @@ export function AppSidebar() {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    removeSession(session.id);
+                    deleteSession(session.id);
+                    if (session.id === currentSessionId) {
+                      setCurrentSession(null);
+                    }
                   }}
                   className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/30 opacity-0 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground/60 group-hover:opacity-100"
                 >

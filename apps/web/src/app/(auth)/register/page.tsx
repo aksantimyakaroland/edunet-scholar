@@ -22,7 +22,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    const { error: err } = await supabase.auth.signUp({
+    const { error: signUpErr } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -30,13 +30,24 @@ export default function RegisterPage() {
       },
     });
 
-    if (err) {
-      setError(err.message);
+    if (signUpErr) {
+      setError(signUpErr.message);
       setLoading(false);
       return;
     }
 
-    router.push("/login?registered=true");
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInErr) {
+      setError(signInErr.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/educhat");
   }
 
   return (

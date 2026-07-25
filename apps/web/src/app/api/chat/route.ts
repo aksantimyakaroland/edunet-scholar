@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { GemmaClient } from "@edunet/ai";
 
 const SYSTEM_PROMPT = [
@@ -48,7 +50,7 @@ const CONFIRM_TURN: { role: "model"; content: string } = {
 };
 
 export async function POST(request: NextRequest) {
-  const { messages } = await request.json();
+  const { messages, sessionId } = await request.json();
 
   if (!messages || !Array.isArray(messages)) {
     return new Response("Invalid messages", { status: 400 });
@@ -60,20 +62,37 @@ export async function POST(request: NextRequest) {
   }
 
   const client = new GemmaClient(apiKey);
-
   const primedMessages = [SYSTEM_TURN, CONFIRM_TURN, ...messages];
+
+  const encoder = new TextEncoder();
+  let fullResponse = "";
+
+  // Save user message immediately if sessionId provided
+  if (sessionId) {
+    const lastUserMsg = messages.filter((m: { role: string }) => m.role === "user").pop();
+    if (lastUserMsg) {
+      supabaseInsert(sessionId, { role: "user", content: lastUserMsg.content }).catch(() => {});
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of client.streamChat(primedMessages)) {
-          controller.enqueue(new TextEncoder().encode(chunk.text));
+          fullResponse += chunk.text;
+          controller.enqueue(encoder.encode(chunk.text));
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        controller.enqueue(new TextEncoder().encode(`\n\nError: ${message}`));
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        fullResponse += `\n\nError: ${message}`;
+        controller.enqueue(encoder.encode(`\n\nError: ${message}`));
       } finally {
         controller.close();
+        // Save assistant message after stream ends
+        if (sessionId && fullResponse) {
+          supabaseInsert(sessionId, { role: "assistant", content: fullResponse }).catch(() => {});
+        }
       }
     },
   });
@@ -84,5 +103,30 @@ export async function POST(request: NextRequest) {
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
     },
+  });
+}
+
+async function supabaseInsert(
+  sessionId: string,
+  msg: { role: string; content: string }
+) {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {},
+      },
+    }
+  );
+
+  await supabase.from("messages").insert({
+    session_id: sessionId,
+    role: msg.role,
+    content: msg.content,
   });
 }
