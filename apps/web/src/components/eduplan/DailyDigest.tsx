@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useEduPlanStore } from "@/stores/eduplan-store";
 import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 
 export function DailyDigest() {
-  const { digest, setDigest, setDigestLoading, digestLoading, tasks } = useEduPlanStore();
+  const { digest, setDigest, setDigestLoading, digestLoading, tasks, currentSubjectId } =
+    useEduPlanStore();
   const [loaded, setLoaded] = useState(false);
+  const prevSubjectRef = useRef(currentSubjectId);
 
   useEffect(() => {
+    if (prevSubjectRef.current !== currentSubjectId) {
+      setLoaded(false);
+      prevSubjectRef.current = currentSubjectId;
+    }
+
     if (!loaded && tasks.length > 0) {
       setDigestLoading(true);
-      fetch("/api/eduplan/digest")
+      const params = currentSubjectId ? `?subjectId=${currentSubjectId}` : "";
+      fetch(`/api/eduplan/digest${params}`)
         .then((r) => r.json())
         .then((data) => {
           setDigest(data);
@@ -20,7 +28,7 @@ export function DailyDigest() {
         .catch(() => setLoaded(true))
         .finally(() => setDigestLoading(false));
     }
-  }, [tasks, loaded, setDigest, setDigestLoading]);
+  }, [tasks, loaded, currentSubjectId, setDigest, setDigestLoading]);
 
   if (digestLoading) {
     return (

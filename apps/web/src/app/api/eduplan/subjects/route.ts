@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     .eq("workspace_id", workspace.id)
     .order("sort_order", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const { data: subject, error } = await supabase
     .from("subjects")

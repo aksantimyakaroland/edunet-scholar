@@ -32,7 +32,7 @@ export function StudyPlanDialog({ open, onClose }: Props) {
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
       const data = await res.json();
-      if (data.plan) setStudyPlan(data.plan);
+      if (res.ok && data.plan) setStudyPlan(data.plan);
     } catch {}
     setGenerating(false);
   }
@@ -53,9 +53,16 @@ export function StudyPlanDialog({ open, onClose }: Props) {
           }),
         });
         const data = await res.json();
-        if (data.task) addTask(data.task);
+        if (res.ok && data.task) addTask(data.task);
       } catch {}
     }
+  }
+
+  function handleClose() {
+    setStudyPlan(null);
+    setPrompt("");
+    setExpandedWeeks(new Set([0]));
+    onClose();
   }
 
   async function handleImportAll() {
@@ -63,7 +70,7 @@ export function StudyPlanDialog({ open, onClose }: Props) {
     for (let i = 0; i < studyPlan.weeks.length; i++) {
       await handleImport(i);
     }
-    onClose();
+    handleClose();
   }
 
   const toggleWeek = (i: number) => {
@@ -75,7 +82,7 @@ export function StudyPlanDialog({ open, onClose }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="flex flex-col max-h-[80vh] sm:max-h-[70vh] p-0 gap-0">
         <DialogHeader className="border-b border-border px-5 py-3">
           <DialogTitle className="font-heading text-sm font-semibold">

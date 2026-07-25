@@ -64,7 +64,6 @@ type EduPlanState = {
   addTask: (task: PlanTask) => void;
   updateTask: (id: string, updates: Partial<PlanTask>) => void;
   removeTask: (id: string) => void;
-  reorderTask: (taskId: string, newOrder: number) => void;
   setLoading: (v: boolean) => void;
   setSuggestions: (s: AISuggestions | null) => void;
   setSuggesting: (v: boolean) => void;
@@ -104,10 +103,6 @@ export const useEduPlanStore = create<EduPlanState>((set) => ({
   removeTask: (id) =>
     set((s) => ({
       tasks: s.tasks.filter((t) => t.id !== id),
-    })),
-  reorderTask: (taskId, sort_order) =>
-    set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, sort_order } : t)),
     })),
   setLoading: (isLoading) => set({ isLoading }),
   setSuggestions: (suggestions) => set({ suggestions }),

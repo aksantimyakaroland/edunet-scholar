@@ -42,6 +42,7 @@ export async function PUT(
   if (body.estimatedHours !== undefined) updates.estimated_hours = body.estimatedHours;
   if (body.completedAt !== undefined) updates.completed_at = body.completedAt;
   if (body.status === "done") updates.completed_at = new Date().toISOString();
+  if (body.status !== undefined && body.status !== "done") updates.completed_at = null;
 
   const { error } = await supabase
     .from("tasks")

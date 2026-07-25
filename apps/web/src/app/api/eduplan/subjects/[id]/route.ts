@@ -30,9 +30,14 @@ export async function PUT(
 
   const body = await request.json();
 
+  const updates: Record<string, unknown> = {};
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.color !== undefined) updates.color = body.color;
+  if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
+
   const { error } = await supabase
     .from("subjects")
-    .update(body)
+    .update(updates)
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -44,23 +44,27 @@ export function TaskItem({ task }: Props) {
 
   async function toggleDone() {
     const newStatus = task.status === "done" ? "todo" : "done";
-    await fetch(`/api/eduplan/tasks/${task.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    updateTask(task.id, { status: newStatus });
+    try {
+      const res = await fetch(`/api/eduplan/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) updateTask(task.id, { status: newStatus });
+    } catch {}
   }
 
   async function handleRemove() {
-    await fetch(`/api/eduplan/tasks/${task.id}`, { method: "DELETE" });
-    removeTask(task.id);
+    try {
+      const res = await fetch(`/api/eduplan/tasks/${task.id}`, { method: "DELETE" });
+      if (res.ok) removeTask(task.id);
+    } catch {}
   }
 
   return (
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-50")}>
       <div className="flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 transition-colors hover:bg-muted/50">
-        <button className="cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground shrink-0" {...attributes} {...listeners}>
+        <button aria-label="Drag to reorder" className="cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground shrink-0" {...attributes} {...listeners}>
           <GripVertical className="h-3.5 w-3.5" />
         </button>
         <button onClick={toggleDone} className="shrink-0">

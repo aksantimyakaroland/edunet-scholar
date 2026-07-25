@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient as createSSRClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { GemmaClient } from "@edunet/ai";
 
-export async function GET() {
+const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const supabase = createSSRClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,15 +35,26 @@ export async function GET() {
 
   if (!workspace) return NextResponse.json({ error: "No workspace" }, { status: 404 });
 
-  const today = new Date().toISOString().split("T")[0];
+  const { searchParams } = new URL(request.url);
+  const subjectId = searchParams.get("subjectId");
 
-  const { data: tasks } = await supabase
+  let query = supabase
     .from("tasks")
     .select("title, status, priority, due_date, estimated_hours")
     .eq("workspace_id", workspace.id)
-    .in("status", ["todo", "in_progress"])
-    .order("priority")
-    .limit(10);
+    .in("status", ["todo", "in_progress"]);
+
+  if (subjectId) {
+    query = query.eq("subject_id", subjectId);
+  }
+
+  const { data: tasks } = await query;
+
+  if (tasks) {
+    tasks.sort((a: { priority: string }, b: { priority: string }) =>
+      (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
+    );
+  }
 
   if (!tasks || tasks.length === 0) {
     return NextResponse.json({

@@ -28,19 +28,21 @@ export function SubTaskList({ parentId, subTasks }: Props) {
         }),
       });
       const data = await res.json();
-      if (data.task) addTask(data.task);
+      if (res.ok && data.task) addTask(data.task);
     } catch {}
     setInput("");
   }
 
   async function toggleDone(task: PlanTask) {
     const newStatus = task.status === "done" ? "todo" : "done";
-    await fetch(`/api/eduplan/tasks/${task.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    updateTask(task.id, { status: newStatus });
+    try {
+      const res = await fetch(`/api/eduplan/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) updateTask(task.id, { status: newStatus });
+    } catch {}
   }
 
   return (
@@ -64,8 +66,10 @@ export function SubTaskList({ parentId, subTasks }: Props) {
           </span>
           <button
             onClick={async () => {
-              await fetch(`/api/eduplan/tasks/${st.id}`, { method: "DELETE" });
-              removeTask(st.id);
+              try {
+                const res = await fetch(`/api/eduplan/tasks/${st.id}`, { method: "DELETE" });
+                if (res.ok) removeTask(st.id);
+              } catch {}
             }}
             className="text-muted-foreground/40 hover:text-destructive"
           >

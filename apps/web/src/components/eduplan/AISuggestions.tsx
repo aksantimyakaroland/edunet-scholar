@@ -29,7 +29,7 @@ export function AISuggestions({ suggestions, onApply, onSkip }: Props) {
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Suggested due:</span>
             <span className="font-medium">
-              {new Date(suggestions.suggestedDueDate).toLocaleDateString()}
+              {new Date(suggestions.suggestedDueDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
             </span>
           </div>
         )}

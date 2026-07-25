@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTasks } from "@/hooks/use-tasks";
-import { useEduPlanStore } from "@/stores/eduplan-store";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SubjectSidebar } from "./SubjectSidebar";
 import { TaskItem } from "./TaskItem";
@@ -25,6 +24,7 @@ import { Calendar, Loader2, BookOpen } from "lucide-react";
 
 export function EduPlanPanel() {
   const {
+    subjects,
     currentSubjectId,
     tasks,
     allTasks,
@@ -34,7 +34,6 @@ export function EduPlanPanel() {
     setCurrentSubjectId,
     update,
   } = useTasks();
-  const { subjects: storeSubjects } = useEduPlanStore();
   const [planOpen, setPlanOpen] = useState(false);
 
   const sensors = useSensors(
@@ -52,13 +51,10 @@ export function EduPlanPanel() {
   }, [currentSubjectId, fetchTasks]);
 
   useEffect(() => {
-    if (storeSubjects.length > 0 && !currentSubjectId) {
-      setCurrentSubjectId(storeSubjects[0].id);
+    if (subjects.length > 0 && !currentSubjectId) {
+      setCurrentSubjectId(subjects[0].id);
     }
-  }, [storeSubjects, currentSubjectId, setCurrentSubjectId]);
-
-  const todoTasks = tasks.filter((t) => t.status === "todo");
-  const otherTasks = tasks.filter((t) => t.status !== "todo");
+  }, [subjects, currentSubjectId, setCurrentSubjectId]);
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -140,10 +136,7 @@ export function EduPlanPanel() {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-0.5">
-                      {todoTasks.map((task) => (
-                        <TaskItem key={task.id} task={task} />
-                      ))}
-                      {otherTasks.map((task) => (
+                      {[...tasks].sort((a, b) => a.sort_order - b.sort_order).map((task) => (
                         <TaskItem key={task.id} task={task} />
                       ))}
                     </div>

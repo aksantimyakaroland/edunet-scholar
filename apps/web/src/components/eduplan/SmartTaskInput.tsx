@@ -107,7 +107,7 @@ export function SmartTaskInput({ subjectId }: Props) {
               handleAdd(true);
             }
           }}
-          placeholder="Add a task..."
+          placeholder={subjectId ? "Add a task..." : "Select a subject first"}
           disabled={!subjectId}
           className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-40"
         />

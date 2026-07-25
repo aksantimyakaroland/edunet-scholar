@@ -22,7 +22,7 @@ export function useTasks() {
     try {
       const res = await fetch(`/api/eduplan/tasks?subjectId=${subjectId}`);
       const data = await res.json();
-      if (data.tasks) setTasks(data.tasks);
+      if (res.ok && data.tasks) setTasks(data.tasks);
     } catch {}
     setLoading(false);
   }
@@ -36,25 +36,31 @@ export function useTasks() {
         body: JSON.stringify({ title, subjectId: currentSubjectId }),
       });
       const data = await res.json();
-      if (data.task) addTask(data.task);
+      if (res.ok && data.task) addTask(data.task);
     } catch {}
   }
 
   async function update(id: string, updates: Record<string, unknown>) {
     try {
-      await fetch(`/api/eduplan/tasks/${id}`, {
+      const res = await fetch(`/api/eduplan/tasks/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-      updateTask(id, updates);
+      if (!res.ok) return;
+      const mapped = { ...updates };
+      if ("sortOrder" in mapped) {
+        (mapped as Record<string, unknown>).sort_order = mapped.sortOrder;
+        delete (mapped as Record<string, unknown>).sortOrder;
+      }
+      updateTask(id, mapped);
     } catch {}
   }
 
   async function remove(id: string) {
     try {
-      await fetch(`/api/eduplan/tasks/${id}`, { method: "DELETE" });
-      removeTask(id);
+      const res = await fetch(`/api/eduplan/tasks/${id}`, { method: "DELETE" });
+      if (res.ok) removeTask(id);
     } catch {}
   }
 
@@ -70,9 +76,13 @@ export function useTasks() {
     setCurrentSubjectId,
     fetchTasks,
     fetchSubjects: async () => {
-      const res = await fetch("/api/eduplan/subjects");
-      const data = await res.json();
-      if (data.subjects) setSubjects(data.subjects);
+      setLoading(true);
+      try {
+        const res = await fetch("/api/eduplan/subjects");
+        const data = await res.json();
+        if (res.ok && data.subjects) setSubjects(data.subjects);
+      } catch {}
+      setLoading(false);
     },
   };
 }
