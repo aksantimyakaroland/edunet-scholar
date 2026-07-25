@@ -19,6 +19,7 @@ export function useChat(sessionId?: string | null) {
   useEffect(() => {
     if (!sessionId) {
       setMessages([]);
+      messagesRef.current = [];
       setSessionLoaded(true);
       activeSessionId.current = null;
       return;
@@ -80,11 +81,11 @@ export function useChat(sessionId?: string | null) {
           if (data.session) {
             sid = data.session.id;
             activeSessionId.current = sid;
-            setCurrentSession(sid);
-            // Update URL without reload
+            // Update URL without reload before updating store
             const url = new URL(window.location.href);
             url.searchParams.set("session", sid!);
             window.history.replaceState({}, "", url.toString());
+            setCurrentSession(sid);
           }
         } catch {
           // Fallback: send anyway without session

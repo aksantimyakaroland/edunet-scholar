@@ -52,25 +52,9 @@ export async function POST(request: NextRequest) {
 
   const { title, firstMessage } = await request.json();
 
-  let sessionTitle = title || "New Chat";
-
-  if (!title && firstMessage) {
-    try {
-      const apiKey = process.env.GEMMA_API_KEY;
-      if (apiKey) {
-        const client = new GemmaClient(apiKey);
-        const prompt = `Generate a very short title (max 5 words) for a chat conversation about: "${firstMessage}". Respond with ONLY the title, no quotes, no punctuation.`;
-        let response = "";
-        for await (const chunk of client.streamChat([{ role: "user", content: prompt }])) {
-          response += chunk.text;
-        }
-        const cleaned = response.replace(/^["'\s]+|["'\s]+$/g, "").trim();
-        if (cleaned.length > 0 && cleaned.length <= 60) {
-          sessionTitle = cleaned;
-        }
-      }
-    } catch {}
-  }
+  const sessionTitle = title || (firstMessage
+    ? firstMessage.substring(0, 40) + (firstMessage.length > 40 ? "..." : "")
+    : "New Chat");
 
   const { data: session, error } = await supabase
     .from("chat_sessions")
@@ -80,5 +64,41 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Fire-and-forget: refine title via AI after response is sent
+  if (!title && firstMessage && session) {
+    refineTitle(session.id, firstMessage).catch(() => {});
+  }
+
   return NextResponse.json({ session });
+}
+
+async function refineTitle(sessionId: string, firstMessage: string) {
+  const apiKey = process.env.GEMMA_API_KEY;
+  if (!apiKey) return;
+
+  const client = new GemmaClient(apiKey);
+  const prompt = `Generate a very short title (max 5 words) for a chat conversation about: "${firstMessage}". Respond with ONLY the title, no quotes, no punctuation.`;
+  let response = "";
+  try {
+    for await (const chunk of client.streamChat([{ role: "user", content: prompt }])) {
+      response += chunk.text;
+    }
+  } catch {
+    return;
+  }
+
+  const cleaned = response.replace(/^["'\s]+|["'\s]+$/g, "").trim();
+  if (!cleaned || cleaned.length > 60) return;
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+    );
+    await supabase.from("chat_sessions").update({ title: cleaned }).eq("id", sessionId);
+  } catch {
+    // Ignore — substring title is already set
+  }
 }

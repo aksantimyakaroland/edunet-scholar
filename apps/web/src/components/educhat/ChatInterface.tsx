@@ -4,7 +4,6 @@ import { useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useChat } from "@/hooks/use-chat";
 import { useChatSessions } from "@/hooks/use-chat-sessions";
-import { useChatSessionsStore } from "@/stores/chat-sessions-store";
 import { AIComposer } from "./AIComposer";
 import { MessageBubble } from "./MessageBubble";
 import { EmptyState } from "./EmptyState";
@@ -16,12 +15,9 @@ export function ChatInterface() {
   const { messages, isLoading, sessionLoaded, sendMessage, stop, clear } =
     useChat(sessionId);
   const { sessions } = useChatSessions();
-  const currentSessionId = useChatSessionsStore((s) => s.currentSessionId);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const currentSession = sessions.find(
-    (s) => s.id === (sessionId || currentSessionId)
-  );
+  const currentSession = sessions.find((s) => s.id === sessionId);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
