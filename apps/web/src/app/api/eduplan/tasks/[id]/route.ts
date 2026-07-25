@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient as createSSRClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const supabase = createSSRClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,8 +24,8 @@ export async function PUT(
   if (body.sortOrder !== undefined) updates.sort_order = body.sortOrder;
   if (body.estimatedHours !== undefined) updates.estimated_hours = body.estimatedHours;
   if (body.completedAt !== undefined) updates.completed_at = body.completedAt;
-  if (body.status === "done") updates.completed_at = new Date().toISOString();
-  if (body.status !== undefined && body.status !== "done") updates.completed_at = null;
+  else if (body.status === "done") updates.completed_at = new Date().toISOString();
+  else if (body.status !== undefined) updates.completed_at = null;
 
   const { error } = await supabase
     .from("tasks")
@@ -59,23 +42,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const supabase = createSSRClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

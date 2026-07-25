@@ -1,25 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,7 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
   }
 
-  const fileName = `${crypto.randomUUID()}-${file.name}`;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const fileName = `${crypto.randomUUID()}-${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await supabase.storage
@@ -57,7 +41,10 @@ export async function POST(request: NextRequest) {
       upsert: false,
     });
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (uploadError) {
+    console.error("Storage upload error:", uploadError);
+    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
 
   let content = "";
   try {
@@ -74,7 +61,8 @@ export async function POST(request: NextRequest) {
     } else {
       content = buffer.toString("utf-8");
     }
-  } catch {
+  } catch (extractError) {
+    console.error("Content extraction error:", extractError);
     content = "[Content extraction failed]";
   }
 
@@ -87,10 +75,11 @@ export async function POST(request: NextRequest) {
       storage_path: fileName,
       content,
     })
-    .select("id, title, file_type, created_at")
+    .select("id, title, file_type, storage_path, created_at")
     .single();
 
   if (dbError) {
+    console.error("DB insert error:", dbError);
     await supabase.storage.from("edubook-documents").remove([fileName]);
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
@@ -99,6 +88,7 @@ export async function POST(request: NextRequest) {
     id: doc.id,
     name: doc.title,
     type: doc.file_type,
+    storage_path: doc.storage_path,
     uploadedAt: doc.created_at,
   });
 }

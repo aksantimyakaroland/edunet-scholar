@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useEduPlanStore, type PlanTask } from "@/stores/eduplan-store";
 import { CheckCircle2, Circle, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ export function SubTaskList({ parentId, subTasks }: Props) {
   const { addTask, updateTask, removeTask } = useEduPlanStore();
   const [input, setInput] = useState("");
 
-  async function handleAdd() {
+  const handleAdd = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
     try {
@@ -27,13 +27,16 @@ export function SubTaskList({ parentId, subTasks }: Props) {
           subjectId: subTasks[0]?.subject_id || null,
         }),
       });
+      if (!res.ok) throw new Error("Failed to add subtask");
       const data = await res.json();
-      if (res.ok && data.task) addTask(data.task);
-    } catch {}
+      if (data.task) addTask(data.task);
+    } catch (err) {
+      console.error("Failed to add subtask:", err);
+    }
     setInput("");
-  }
+  }, [input, parentId, subTasks, addTask]);
 
-  async function toggleDone(task: PlanTask) {
+  const toggleDone = useCallback(async (task: PlanTask) => {
     const newStatus = task.status === "done" ? "todo" : "done";
     try {
       const res = await fetch(`/api/eduplan/tasks/${task.id}`, {
@@ -41,9 +44,22 @@ export function SubTaskList({ parentId, subTasks }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) updateTask(task.id, { status: newStatus });
-    } catch {}
-  }
+      if (!res.ok) throw new Error("Failed to update subtask");
+      updateTask(task.id, { status: newStatus });
+    } catch (err) {
+      console.error("Failed to toggle subtask:", err);
+    }
+  }, [updateTask]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/eduplan/tasks/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete subtask");
+      removeTask(id);
+    } catch (err) {
+      console.error("Failed to delete subtask:", err);
+    }
+  }, [removeTask]);
 
   return (
     <div className="space-y-0.5 py-1">
@@ -65,12 +81,7 @@ export function SubTaskList({ parentId, subTasks }: Props) {
             {st.title}
           </span>
           <button
-            onClick={async () => {
-              try {
-                const res = await fetch(`/api/eduplan/tasks/${st.id}`, { method: "DELETE" });
-                if (res.ok) removeTask(st.id);
-              } catch {}
-            }}
+            onClick={() => handleDelete(st.id)}
             className="text-muted-foreground/40 hover:text-destructive"
           >
             <Trash2 className="h-3 w-3" />

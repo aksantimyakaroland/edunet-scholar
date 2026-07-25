@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Trash2, CheckSquare, Square } from "lucide-react";
+import { FileText, Trash2, CheckSquare, Square, Upload } from "lucide-react";
 import { useEduBookStore, type EduBookDocument } from "@/stores/edubook-store";
 
 type Props = {
@@ -11,11 +11,19 @@ type Props = {
 export function DocumentList({ documents, onRemove }: Props) {
   const { selectedDocIds, toggleDocSelection } = useEduBookStore();
 
-  if (documents.length === 0) return null;
+  if (documents.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Upload className="mb-3 h-8 w-8 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">No documents yet</p>
+        <p className="text-xs text-muted-foreground/60">Upload a file to get started</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-1">
         <p className="text-xs font-medium text-muted-foreground">
           {documents.length} document{documents.length !== 1 ? "s" : ""}
           {selectedDocIds.length > 0 && ` (${selectedDocIds.length} selected)`}
@@ -32,7 +40,11 @@ export function DocumentList({ documents, onRemove }: Props) {
                 : "border-border bg-card hover:border-primary/30"
             }`}
           >
-            <button onClick={() => toggleDocSelection(doc.id)} className="shrink-0">
+            <button
+              onClick={() => toggleDocSelection(doc.id)}
+              className="shrink-0"
+              aria-label={isSelected ? `Deselect ${doc.title}` : `Select ${doc.title}`}
+            >
               {isSelected ? (
                 <CheckSquare className="h-4 w-4 text-primary" />
               ) : (
@@ -51,6 +63,7 @@ export function DocumentList({ documents, onRemove }: Props) {
             <button
               onClick={() => onRemove(doc.id)}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Delete ${doc.title}`}
             >
               <Trash2 className="h-4 w-4" />
             </button>

@@ -9,6 +9,7 @@ export function DailyDigest() {
     useEduPlanStore();
   const [loaded, setLoaded] = useState(false);
   const prevSubjectRef = useRef(currentSubjectId);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (prevSubjectRef.current !== currentSubjectId) {
@@ -17,17 +18,29 @@ export function DailyDigest() {
     }
 
     if (!loaded && tasks.length > 0) {
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
       setDigestLoading(true);
       const params = currentSubjectId ? `?subjectId=${currentSubjectId}` : "";
-      fetch(`/api/eduplan/digest${params}`)
+      fetch(`/api/eduplan/digest${params}`, {
+        signal: abortRef.current.signal,
+      })
         .then((r) => r.json())
         .then((data) => {
           setDigest(data);
           setLoaded(true);
         })
-        .catch(() => setLoaded(true))
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          console.error("Failed to load digest:", err);
+          setLoaded(true);
+        })
         .finally(() => setDigestLoading(false));
     }
+
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [tasks, loaded, currentSubjectId, setDigest, setDigestLoading]);
 
   if (digestLoading) {

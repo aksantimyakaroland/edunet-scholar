@@ -49,6 +49,7 @@ type EduPlanState = {
   currentSubjectId: string | null;
   tasks: PlanTask[];
   isLoading: boolean;
+  error: string | null;
   suggestions: AISuggestions | null;
   isSuggesting: boolean;
   studyPlan: StudyPlan | null;
@@ -65,6 +66,7 @@ type EduPlanState = {
   updateTask: (id: string, updates: Partial<PlanTask>) => void;
   removeTask: (id: string) => void;
   setLoading: (v: boolean) => void;
+  setError: (v: string | null) => void;
   setSuggestions: (s: AISuggestions | null) => void;
   setSuggesting: (v: boolean) => void;
   setStudyPlan: (plan: StudyPlan | null) => void;
@@ -79,6 +81,7 @@ export const useEduPlanStore = create<EduPlanState>((set) => ({
   currentSubjectId: null,
   tasks: [],
   isLoading: false,
+  error: null,
   suggestions: null,
   isSuggesting: false,
   studyPlan: null,
@@ -105,6 +108,7 @@ export const useEduPlanStore = create<EduPlanState>((set) => ({
       tasks: s.tasks.filter((t) => t.id !== id),
     })),
   setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
   setSuggestions: (suggestions) => set({ suggestions }),
   setSuggesting: (isSuggesting) => set({ isSuggesting }),
   setStudyPlan: (studyPlan) => set({ studyPlan }),

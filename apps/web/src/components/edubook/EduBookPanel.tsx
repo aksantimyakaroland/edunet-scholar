@@ -28,41 +28,39 @@ export function EduBookPanel() {
             Upload course materials and ask questions about them.
           </p>
         </div>
-        {selectedDocIds.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap justify-end">
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                showChat
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Chat
-            </button>
-            <button
-              onClick={() => setShowChat(false)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                !showChat
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Docs
-            </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              onClick={() => setGuideOpen(true)}
-              disabled={selectedDocIds.length === 0}
-              className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/80 disabled:opacity-40"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              Generate
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1 flex-wrap justify-end">
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              showChat
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Chat
+          </button>
+          <button
+            onClick={() => setShowChat(false)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              !showChat
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Docs
+          </button>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <button
+            onClick={() => setGuideOpen(true)}
+            disabled={selectedDocIds.length === 0}
+            className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/80 disabled:opacity-40"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Generate
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

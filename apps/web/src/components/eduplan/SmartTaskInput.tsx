@@ -10,7 +10,7 @@ type Props = {
 };
 
 export function SmartTaskInput({ subjectId }: Props) {
-  const { addTask, suggestions, setSuggestions, setSuggesting, clearSuggestions } =
+  const { addTask, suggestions, setSuggestions, setSuggesting, clearSuggestions, setError } =
     useEduPlanStore();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -28,9 +28,11 @@ export function SmartTaskInput({ subjectId }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: trimmed }),
         });
+        if (!res.ok) throw new Error("Failed to get suggestions");
         const data = await res.json();
         setSuggestions(data);
-      } catch {
+      } catch (err) {
+        console.error("Failed to get suggestions:", err);
         setSuggestions(null);
       } finally {
         setIsLoading(false);
@@ -44,9 +46,16 @@ export function SmartTaskInput({ subjectId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed, subjectId }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || "Failed to add task");
+      }
       const data = await res.json();
       if (data.task) addTask(data.task);
-    } catch {}
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to add task";
+      setError(msg);
+    }
     setInput("");
   }
 
@@ -65,26 +74,31 @@ export function SmartTaskInput({ subjectId }: Props) {
           estimatedHours: s.estimatedHours,
         }),
       });
+      if (!res.ok) throw new Error("Failed to create task");
       const data = await res.json();
       if (data.task) addTask(data.task);
 
       if (s.suggestedSubtasks.length > 0) {
-        for (const st of s.suggestedSubtasks) {
-          await fetch("/api/eduplan/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: st,
-              subjectId,
-              parentId: data.task.id,
-            }),
-          });
-        }
+        await Promise.all(
+          s.suggestedSubtasks.map((st) =>
+            fetch("/api/eduplan/tasks", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: st,
+                subjectId,
+                parentId: data.task.id,
+              }),
+            })
+          )
+        );
         const tasksRes = await fetch(`/api/eduplan/tasks?subjectId=${subjectId}`);
         const tasksData = await tasksRes.json();
         if (tasksData.tasks) useEduPlanStore.getState().setTasks(tasksData.tasks);
       }
-    } catch {}
+    } catch (err) {
+      console.error("Failed to apply suggestions:", err);
+    }
     setInput("");
     clearSuggestions();
   }

@@ -5,6 +5,15 @@ import { useEduPlanStore } from "@/stores/eduplan-store";
 import { Plus, Trash2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function hashColor(name: string): string {
+  const colors = ["#5B5BD6", "#22C55E", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#8B5CF6", "#F97316"];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
 export function SubjectSidebar() {
   const {
     subjects,
@@ -13,6 +22,7 @@ export function SubjectSidebar() {
     addSubject,
     removeSubject,
     tasks,
+    setError,
   } = useEduPlanStore();
   const [showInput, setShowInput] = useState(false);
   const [name, setName] = useState("");
@@ -20,17 +30,22 @@ export function SubjectSidebar() {
   async function handleAdd() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const colors = ["#5B5BD6", "#22C55E", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#8B5CF6", "#F97316"];
-    const color = colors[subjects.length % colors.length];
+    const color = hashColor(trimmed);
     try {
       const res = await fetch("/api/eduplan/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed, color }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || "Failed to add subject");
+      }
       const data = await res.json();
-      if (res.ok && data.subject) addSubject(data.subject);
-    } catch {}
+      if (data.subject) addSubject(data.subject);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add subject");
+    }
     setName("");
     setShowInput(false);
   }
@@ -39,8 +54,14 @@ export function SubjectSidebar() {
     e.stopPropagation();
     try {
       const res = await fetch(`/api/eduplan/subjects/${subjectId}`, { method: "DELETE" });
-      if (res.ok) removeSubject(subjectId);
-    } catch {}
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || "Failed to delete subject");
+      }
+      removeSubject(subjectId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete subject");
+    }
   }
 
   const taskCount = (subjectId: string) =>

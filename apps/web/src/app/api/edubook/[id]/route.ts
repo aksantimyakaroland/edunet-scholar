@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient as createSSRClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const supabase = createSSRClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,7 +30,12 @@ export async function DELETE(
 
   if (!workspace) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  await supabase.storage.from("edubook-documents").remove([doc.storage_path]);
+  if (doc.storage_path) {
+    const { error: storageError } = await supabase.storage.from("edubook-documents").remove([doc.storage_path]);
+    if (storageError) {
+      console.error("Failed to remove storage file:", storageError);
+    }
+  }
 
   const { error: deleteError } = await supabase
     .from("documents")
@@ -55,6 +43,7 @@ export async function DELETE(
     .eq("id", id);
 
   if (deleteError) {
+    console.error("Failed to delete document:", deleteError);
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 

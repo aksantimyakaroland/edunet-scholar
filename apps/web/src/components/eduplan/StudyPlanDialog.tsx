@@ -17,7 +17,7 @@ type Props = {
 };
 
 export function StudyPlanDialog({ open, onClose }: Props) {
-  const { studyPlan, setStudyPlan, setGenerating, isGenerating, addTask, currentSubjectId } =
+  const { studyPlan, setStudyPlan, setGenerating, isGenerating, addTask, currentSubjectId, setError } =
     useEduPlanStore();
   const [prompt, setPrompt] = useState("");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0]));
@@ -31,9 +31,12 @@ export function StudyPlanDialog({ open, onClose }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
+      if (!res.ok) throw new Error("Failed to generate study plan");
       const data = await res.json();
-      if (res.ok && data.plan) setStudyPlan(data.plan);
-    } catch {}
+      if (data.plan) setStudyPlan(data.plan);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate study plan");
+    }
     setGenerating(false);
   }
 
@@ -41,20 +44,29 @@ export function StudyPlanDialog({ open, onClose }: Props) {
     const week = studyPlan?.weeks[weekIndex];
     if (!week || !currentSubjectId) return;
 
-    for (const task of week.tasks) {
-      try {
-        const res = await fetch("/api/eduplan/tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: task.title,
-            subjectId: currentSubjectId,
-            estimatedHours: task.estimatedHours,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok && data.task) addTask(data.task);
-      } catch {}
+    const errors: string[] = [];
+    await Promise.all(
+      week.tasks.map(async (task) => {
+        try {
+          const res = await fetch("/api/eduplan/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: task.title,
+              subjectId: currentSubjectId,
+              estimatedHours: task.estimatedHours,
+            }),
+          });
+          if (!res.ok) throw new Error(`Failed to import: ${task.title}`);
+          const data = await res.json();
+          if (data.task) addTask(data.task);
+        } catch (err) {
+          errors.push(err instanceof Error ? err.message : "Unknown error");
+        }
+      })
+    );
+    if (errors.length > 0) {
+      setError(`${errors.length} task(s) failed to import.`);
     }
   }
 
@@ -67,9 +79,7 @@ export function StudyPlanDialog({ open, onClose }: Props) {
 
   async function handleImportAll() {
     if (!studyPlan || !currentSubjectId) return;
-    for (let i = 0; i < studyPlan.weeks.length; i++) {
-      await handleImport(i);
-    }
+    await Promise.all(studyPlan.weeks.map((_, i) => handleImport(i)));
     handleClose();
   }
 

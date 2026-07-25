@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -21,8 +22,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
-    const { error: signUpErr } = await supabase.auth.signUp({
+    const { data, error: signUpErr } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -36,18 +38,22 @@ export default function RegisterPage() {
       return;
     }
 
-    const { error: signInErr } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // If email confirmation is not required, sign in immediately
+    if (data?.user?.identities?.length) {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (signInErr) {
-      setError(signInErr.message);
-      setLoading(false);
-      return;
+      if (!signInErr) {
+        router.push("/educhat");
+        return;
+      }
     }
 
-    router.push("/educhat");
+    // Account was created but sign-in failed or email confirmation is required
+    setMessage("Account created! Please check your email to confirm your account before signing in.");
+    setLoading(false);
   }
 
   return (
@@ -107,6 +113,9 @@ export default function RegisterPage() {
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>
+          )}
+          {message && (
+            <p className="text-sm text-primary">{message}</p>
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>

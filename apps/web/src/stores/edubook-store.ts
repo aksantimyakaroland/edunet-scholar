@@ -13,6 +13,7 @@ type EduBookState = {
   selectedDocIds: string[];
   isUploading: boolean;
   isLoading: boolean;
+  error: string | null;
 
   // Chat
   chatMessages: { role: "user" | "assistant"; content: string }[];
@@ -25,7 +26,9 @@ type EduBookState = {
   toggleDocSelection: (id: string) => void;
   setUploading: (v: boolean) => void;
   setLoading: (v: boolean) => void;
+  setError: (v: string | null) => void;
   addChatMessage: (msg: { role: "user" | "assistant"; content: string }) => void;
+  updateLastChatMessage: (content: string) => void;
   setChatMessages: (msgs: { role: "user" | "assistant"; content: string }[]) => void;
   setChatLoading: (v: boolean) => void;
   clearSelection: () => void;
@@ -36,6 +39,7 @@ export const useEduBookStore = create<EduBookState>((set) => ({
   selectedDocIds: [],
   isUploading: false,
   isLoading: false,
+  error: null,
   chatMessages: [],
   isChatLoading: false,
 
@@ -54,8 +58,15 @@ export const useEduBookStore = create<EduBookState>((set) => ({
     })),
   setUploading: (isUploading) => set({ isUploading }),
   setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
   addChatMessage: (msg) =>
     set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
+  updateLastChatMessage: (content) =>
+    set((s) => {
+      const msgs = [...s.chatMessages];
+      if (msgs.length > 0) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+      return { chatMessages: msgs };
+    }),
   setChatMessages: (chatMessages) => set({ chatMessages }),
   setChatLoading: (isChatLoading) => set({ isChatLoading }),
   clearSelection: () => set({ selectedDocIds: [] }),

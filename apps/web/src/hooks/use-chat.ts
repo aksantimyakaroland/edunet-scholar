@@ -10,10 +10,11 @@ export function useChat(sessionId?: string | null) {
   const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ExtendedMessage[]>([]);
   const activeSessionId = useRef<string | null>(null);
-  const sessionJustCreatedRef = useRef(false);
+  const loadedSessionIds = useRef(new Set<string>());
   const setCurrentSession = useChatSessionsStore((s) => s.setCurrentSession);
 
   // Load messages when sessionId changes
@@ -22,22 +23,27 @@ export function useChat(sessionId?: string | null) {
       setMessages([]);
       messagesRef.current = [];
       setSessionLoaded(true);
+      setError(null);
       activeSessionId.current = null;
       return;
     }
 
-    // Don't reload if we just created this session (messages are streaming)
-    if (sessionJustCreatedRef.current && activeSessionId.current === sessionId) {
-      sessionJustCreatedRef.current = false;
+    activeSessionId.current = sessionId;
+
+    // Already loaded this session — skip fetch
+    if (loadedSessionIds.current.has(sessionId)) {
       setSessionLoaded(true);
       return;
     }
 
-    activeSessionId.current = sessionId;
     setSessionLoaded(false);
+    setError(null);
 
     fetch(`/api/chat/sessions/${sessionId}/messages`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load messages (${r.status})`);
+        return r.json();
+      })
       .then((data) => {
         if (data.messages) {
           const loaded = data.messages.map(
@@ -49,9 +55,13 @@ export function useChat(sessionId?: string | null) {
           );
           setMessages(loaded);
           messagesRef.current = loaded;
+          loadedSessionIds.current.add(sessionId);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Failed to load messages:", err);
+        setError(err instanceof Error ? err.message : "Failed to load messages");
+      })
       .finally(() => setSessionLoaded(true));
   }, [sessionId]);
 
@@ -74,6 +84,7 @@ export function useChat(sessionId?: string | null) {
 
       updateMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
+      setError(null);
 
       // Ensure we have a session
       let sid = activeSessionId.current;
@@ -84,19 +95,22 @@ export function useChat(sessionId?: string | null) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ firstMessage: content }),
           });
+          if (!res.ok) throw new Error("Failed to create session");
           const data = await res.json();
           if (data.session) {
-            sid = data.session.id;
-            activeSessionId.current = sid;
-            sessionJustCreatedRef.current = true;
+            const newSid: string = data.session.id;
+            sid = newSid;
+            activeSessionId.current = newSid;
+            loadedSessionIds.current.add(newSid);
             // Update URL without triggering re-render race
             const url = new URL(window.location.href);
-            url.searchParams.set("session", sid!);
+            url.searchParams.set("session", newSid);
             window.history.replaceState({}, "", url.toString());
-            setCurrentSession(sid);
+            setCurrentSession(newSid);
           }
-        } catch {
-          // Fallback: send anyway without session
+        } catch (err) {
+          console.error("Failed to create session:", err);
+          // Send anyway without session
         }
       }
 
@@ -116,6 +130,7 @@ export function useChat(sessionId?: string | null) {
         }));
 
       try {
+        abortRef.current?.abort();
         abortRef.current = new AbortController();
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -146,15 +161,12 @@ export function useChat(sessionId?: string | null) {
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        setError(msg);
         updateMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMessage.id
-              ? {
-                  ...m,
-                  content: `Error: ${
-                    error instanceof Error ? error.message : "Unknown error"
-                  }`,
-                }
+              ? { ...m, content: `Error: ${msg}` }
               : m
           )
         );
@@ -168,17 +180,22 @@ export function useChat(sessionId?: string | null) {
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
+    abortRef.current = null;
     setIsLoading(false);
   }, []);
 
   const clear = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     updateMessages(() => []);
     activeSessionId.current = null;
+    loadedSessionIds.current.clear();
     setCurrentSession(null);
+    setError(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("session");
     window.history.replaceState({}, "", url.toString());
   }, [updateMessages, setCurrentSession]);
 
-  return { messages, isLoading, sessionLoaded, sendMessage, stop, clear };
+  return { messages, isLoading, sessionLoaded, error, sendMessage, stop, clear };
 }

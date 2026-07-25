@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient as createSSRClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { GemmaClient } from "@edunet/ai";
 
 const TYPE_PROMPTS: Record<string, string> = {
@@ -15,23 +14,7 @@ const TYPE_PROMPTS: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createSSRClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,9 +61,15 @@ export async function POST(request: NextRequest) {
         for await (const chunk of client.streamChat([
           { role: "user", content: prompt },
         ])) {
+          if (request.signal.aborted) {
+            controller.close();
+            return;
+          }
           controller.enqueue(new TextEncoder().encode(chunk.text));
         }
       } catch (error) {
+        if (request.signal.aborted) return;
+        console.error("EduBook generate error:", error);
         const message = error instanceof Error ? error.message : "Unknown error";
         controller.enqueue(new TextEncoder().encode(`\n\nError: ${message}`));
       } finally {
@@ -91,9 +80,8 @@ export async function POST(request: NextRequest) {
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
+      "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
     },
   });
 }

@@ -25,10 +25,13 @@ export class GemmaClient {
     signal?: AbortSignal
   ): AsyncGenerator<StreamChunk> {
     const response = await fetch(
-      `${BASE_URL}/models/${MODEL}:streamGenerateContent?alt=sse&key=${this.apiKey}`,
+      `${BASE_URL}/models/${MODEL}:streamGenerateContent?alt=sse`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": this.apiKey,
+        },
         body: JSON.stringify({
           contents: messages.map((m) => ({
             role: m.role,
@@ -96,10 +99,13 @@ export class GemmaClient {
 
   async chat(messages: Message[]): Promise<string> {
     const response = await fetch(
-      `${BASE_URL}/models/${MODEL}:generateContent?key=${this.apiKey}`,
+      `${BASE_URL}/models/${MODEL}:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": this.apiKey,
+        },
         body: JSON.stringify({
           contents: messages.map((m) => ({
             role: m.role,

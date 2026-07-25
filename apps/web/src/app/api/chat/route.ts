@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { GemmaClient } from "@edunet/ai";
 
 const SYSTEM_PROMPT = [
@@ -50,6 +49,13 @@ const CONFIRM_TURN: { role: "model"; content: string } = {
 };
 
 export async function POST(request: NextRequest) {
+  // Auth check
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const { messages, sessionId } = await request.json();
 
   if (!messages || !Array.isArray(messages)) {
@@ -59,6 +65,28 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMMA_API_KEY;
   if (!apiKey) {
     return new Response("GEMMA_API_KEY not configured", { status: 500 });
+  }
+
+  // Verify session ownership if sessionId provided
+  if (sessionId) {
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (workspace) {
+      const { data: session } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("id", sessionId)
+        .eq("workspace_id", workspace.id)
+        .single();
+
+      if (!session) {
+        return new Response("Session not found", { status: 404 });
+      }
+    }
   }
 
   const client = new GemmaClient(apiKey);
@@ -71,7 +99,9 @@ export async function POST(request: NextRequest) {
   if (sessionId) {
     const lastUserMsg = messages.filter((m: { role: string }) => m.role === "user").pop();
     if (lastUserMsg) {
-      supabaseInsert(sessionId, { role: "user", content: lastUserMsg.content }).catch(() => {});
+      supabaseInsert(sessionId, { role: "user", content: lastUserMsg.content }).catch(
+        (err) => console.error("Failed to persist user message:", err)
+      );
     }
   }
 
@@ -79,19 +109,25 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         for await (const chunk of client.streamChat(primedMessages)) {
+          if (request.signal.aborted) {
+            controller.close();
+            return;
+          }
           fullResponse += chunk.text;
           controller.enqueue(encoder.encode(chunk.text));
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
+        if (request.signal.aborted) return;
+        console.error("Chat stream error:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
         fullResponse += `\n\nError: ${message}`;
         controller.enqueue(encoder.encode(`\n\nError: ${message}`));
       } finally {
         controller.close();
-        // Save assistant message after stream ends
         if (sessionId && fullResponse) {
-          supabaseInsert(sessionId, { role: "assistant", content: fullResponse }).catch(() => {});
+          supabaseInsert(sessionId, { role: "assistant", content: fullResponse }).catch(
+            (err) => console.error("Failed to persist assistant message:", err)
+          );
         }
       }
     },
@@ -99,9 +135,8 @@ export async function POST(request: NextRequest) {
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
+      "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
     },
   });
 }
@@ -110,20 +145,7 @@ async function supabaseInsert(
   sessionId: string,
   msg: { role: string; content: string }
 ) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
-
+  const supabase = await createClient();
   await supabase.from("messages").insert({
     session_id: sessionId,
     role: msg.role,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useEduBookStore } from "@/stores/edubook-store";
 import {
   Dialog,
@@ -31,20 +31,43 @@ export function StudyGuideDialog({ open, onClose }: Props) {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      abortRef.current?.abort();
+      setContent("");
+      setError("");
+      setIsLoading(false);
+    }
+  }, [open]);
+
+  function handleTypeChange(newType: string) {
+    abortRef.current?.abort();
+    setType(newType);
+    setContent("");
+    setError("");
+  }
 
   async function handleGenerate() {
     setIsLoading(true);
     setContent("");
     setError("");
 
+    abortRef.current = new AbortController();
+
     try {
       const response = await fetch("/api/edubook/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentIds: selectedDocIds, type }),
+        signal: abortRef.current.signal,
       });
 
-      if (!response.ok) throw new Error("Generation failed");
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(err.error || `Generation failed (${response.status})`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
@@ -56,18 +79,26 @@ export function StudyGuideDialog({ open, onClose }: Props) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        setContent(buffer);
       }
-
-      setContent(buffer);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
+      abortRef.current = null;
     }
   }
 
+  function handleClose() {
+    abortRef.current?.abort();
+    onClose();
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="flex flex-col max-h-[80vh] sm:max-h-[70vh] p-0 gap-0">
         <DialogHeader className="border-b border-border px-5 py-3">
           <DialogTitle className="font-heading text-sm font-semibold">
@@ -81,7 +112,7 @@ export function StudyGuideDialog({ open, onClose }: Props) {
             return (
               <button
                 key={t.id}
-                onClick={() => { setType(t.id); setContent(""); }}
+                onClick={() => handleTypeChange(t.id)}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                   type === t.id
                     ? "bg-primary text-primary-foreground"
@@ -107,14 +138,14 @@ export function StudyGuideDialog({ open, onClose }: Props) {
               )}
             </div>
           )}
-          {isLoading && (
+          {isLoading && !content && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Generating...
             </div>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {content && !isLoading && (
+          {content && (
             <div className="prose prose-sm max-w-none dark:prose-invert">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             </div>

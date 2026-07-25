@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import { Send, Loader2, BookOpen } from "lucide-react";
 
 export function EduBookChatPanel() {
-  const { selectedDocIds, chatMessages, isChatLoading, addChatMessage, setChatLoading, setChatMessages } =
+  const { selectedDocIds, chatMessages, isChatLoading, error, addChatMessage, updateLastChatMessage, setChatLoading, setChatMessages, setError } =
     useEduBookStore();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -17,12 +17,21 @@ export function EduBookChatPanel() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   async function handleAsk() {
     const trimmed = input.trim();
     if (!trimmed || selectedDocIds.length === 0 || isChatLoading) return;
 
     setInput("");
+    setError(null);
+    abortRef.current?.abort();
     addChatMessage({ role: "user", content: trimmed });
+    addChatMessage({ role: "assistant", content: "" });
     setChatLoading(true);
 
     abortRef.current = new AbortController();
@@ -35,7 +44,10 @@ export function EduBookChatPanel() {
         signal: abortRef.current.signal,
       });
 
-      if (!response.ok) throw new Error("Request failed");
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(err.error || `Request failed (${response.status})`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
@@ -47,15 +59,16 @@ export function EduBookChatPanel() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        updateLastChatMessage(buffer);
       }
-
-      addChatMessage({ role: "assistant", content: buffer });
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      addChatMessage({
-        role: "assistant",
-        content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      });
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateLastChatMessage("[Cancelled]");
+        return;
+      }
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      updateLastChatMessage(`Error: ${msg}`);
+      setError(msg);
     } finally {
       setChatLoading(false);
       abortRef.current = null;
@@ -95,7 +108,9 @@ export function EduBookChatPanel() {
             {msg.role === "user" ? (
               <p className="whitespace-pre-wrap">{msg.content}</p>
             ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.content || (isChatLoading ? "Thinking..." : "")}
+              </ReactMarkdown>
             )}
           </div>
         ))}
@@ -114,11 +129,13 @@ export function EduBookChatPanel() {
                 : `Ask about ${selectedDocIds.length} document(s)...`
             }
             disabled={isChatLoading}
+            aria-label="Ask a question about your documents"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50 disabled:opacity-50"
           />
           <button
             onClick={handleAsk}
             disabled={!input.trim() || isChatLoading || selectedDocIds.length === 0}
+            aria-label={isChatLoading ? "Cancel" : "Send message"}
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             {isChatLoading ? (
@@ -128,6 +145,9 @@ export function EduBookChatPanel() {
             )}
           </button>
         </div>
+        {error && (
+          <p className="mt-2 text-xs text-destructive">{error}</p>
+        )}
       </div>
     </div>
   );

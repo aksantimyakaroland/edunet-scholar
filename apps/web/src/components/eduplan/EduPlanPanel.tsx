@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTasks } from "@/hooks/use-tasks";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SubjectSidebar } from "./SubjectSidebar";
@@ -29,6 +29,7 @@ export function EduPlanPanel() {
     tasks,
     allTasks,
     isLoading,
+    error,
     fetchTasks,
     fetchSubjects,
     setCurrentSubjectId,
@@ -50,8 +51,9 @@ export function EduPlanPanel() {
     }
   }, [currentSubjectId, fetchTasks]);
 
+  // Auto-select first subject only when none is selected
   useEffect(() => {
-    if (subjects.length > 0 && !currentSubjectId) {
+    if (subjects.length > 0 && currentSubjectId === null) {
       setCurrentSubjectId(subjects[0].id);
     }
   }, [subjects, currentSubjectId, setCurrentSubjectId]);
@@ -60,13 +62,23 @@ export function EduPlanPanel() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const activeTask = allTasks.find((t) => t.id === active.id);
-    const overTask = allTasks.find((t) => t.id === over.id);
-    if (!activeTask || !overTask) return;
+    const sorted = [...allTasks]
+      .filter((t) => t.subject_id === currentSubjectId && !t.parent_id)
+      .sort((a, b) => a.sort_order - b.sort_order);
 
-    const newOrder = overTask.sort_order;
-    await update(active.id as string, { sortOrder: newOrder });
-    if (currentSubjectId) fetchTasks(currentSubjectId);
+    const oldIndex = sorted.findIndex((t) => t.id === active.id);
+    const newIndex = sorted.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reorder the array
+    sorted.splice(newIndex, 0, sorted.splice(oldIndex, 1)[0]);
+
+    // Update each task's sort_order sequentially (local + server)
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].sort_order !== i) {
+        await update(sorted[i].id, { sortOrder: i });
+      }
+    }
   }
 
   return (
@@ -96,6 +108,12 @@ export function EduPlanPanel() {
           Study Plan
         </button>
       </div>
+
+      {error && (
+        <div className="mx-4 mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <div className="hidden lg:block w-56 shrink-0">

@@ -22,11 +22,14 @@ export function useChatSessions() {
     markSessionsFetched();
     setSessionsLoading(true);
     fetch("/api/chat/sessions")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to fetch sessions (${r.status})`);
+        return r.json();
+      })
       .then((data) => {
         if (data.sessions) setSessions(data.sessions);
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to fetch sessions:", err))
       .finally(() => setSessionsLoading(false));
   }, [sessionsFetched, markSessionsFetched, setSessionsLoading, setSessions]);
 
@@ -38,12 +41,15 @@ export function useChatSessions() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ firstMessage }),
         });
+        if (!res.ok) throw new Error(`Failed to create session (${res.status})`);
         const data = await res.json();
-        if (res.ok && data.session) {
+        if (data.session) {
           addSession(data.session);
           return data.session;
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to create session:", err);
+      }
       return null;
     },
     [addSession]
@@ -54,8 +60,11 @@ export function useChatSessions() {
       const res = await fetch(`/api/chat/sessions/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) removeSession(id);
-    } catch {}
+      if (!res.ok) throw new Error(`Failed to delete session (${res.status})`);
+      removeSession(id);
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+    }
   }, [removeSession]);
 
   const renameSession = useCallback(async (id: string, title: string) => {
@@ -65,8 +74,11 @@ export function useChatSessions() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
-      if (res.ok) renameSessionLocally(id, title);
-    } catch {}
+      if (!res.ok) throw new Error(`Failed to rename session (${res.status})`);
+      renameSessionLocally(id, title);
+    } catch (err) {
+      console.error("Failed to rename session:", err);
+    }
   }, [renameSessionLocally]);
 
   return {

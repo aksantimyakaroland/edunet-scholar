@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback } from "react";
 import { useEduPlanStore, type PlanTask } from "@/stores/eduplan-store";
 import {
   CheckCircle2,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { SubTaskList } from "./SubTaskList";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 
 type Props = {
   task: PlanTask;
@@ -34,7 +35,7 @@ export function TaskItem({ task }: Props) {
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
   };
 
@@ -42,7 +43,7 @@ export function TaskItem({ task }: Props) {
   const hasSubTasks = subTasks.length > 0;
   const subDone = subTasks.filter((t) => t.status === "done").length;
 
-  async function toggleDone() {
+  const toggleDone = useCallback(async () => {
     const newStatus = task.status === "done" ? "todo" : "done";
     try {
       const res = await fetch(`/api/eduplan/tasks/${task.id}`, {
@@ -50,16 +51,22 @@ export function TaskItem({ task }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) updateTask(task.id, { status: newStatus });
-    } catch {}
-  }
+      if (!res.ok) throw new Error("Failed to update task");
+      updateTask(task.id, { status: newStatus });
+    } catch (err) {
+      console.error("Failed to toggle task:", err);
+    }
+  }, [task.id, task.status, updateTask]);
 
-  async function handleRemove() {
+  const handleRemove = useCallback(async () => {
     try {
       const res = await fetch(`/api/eduplan/tasks/${task.id}`, { method: "DELETE" });
-      if (res.ok) removeTask(task.id);
-    } catch {}
-  }
+      if (!res.ok) throw new Error("Failed to delete task");
+      removeTask(task.id);
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    }
+  }, [task.id, removeTask]);
 
   return (
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-50")}>
